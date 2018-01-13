@@ -14,3 +14,4 @@ class HardCodedModel:
             self.model.append(0)
 
         return self.model
+    
