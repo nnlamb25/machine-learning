@@ -5,6 +5,7 @@ class HardCodedClassifier:
     def fit(self, data, target):
         return HardCodedModel()
 
+
 class HardCodedModel:
     def __init__(self):
         self.model = []
