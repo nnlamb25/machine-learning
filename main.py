@@ -53,19 +53,19 @@ def test_data_set(data_set, algorithm):
     return count / len(targets_predicted)
 
 
-# Prints the user's given dataset
-def print_data(dataset):
+# Prints the user's given data set
+def print_data(data_set):
     # Show the data (the attributes of each instance)
     print("DATA:")
-    print(dataset.data)
+    print(data_set.data)
 
     # Show the target values (in numeric format) of each instance
     print("\nTARGET VALUES:")
-    print(dataset.target)
+    print(data_set.target)
 
     # Show the actual target names that correspond to each number
     print("\nTARGET NAMES:")
-    print(dataset.target_names)
+    print(data_set.target_names)
 
 
 def main():
