@@ -38,19 +38,3 @@ class kNNModel:
                 closest[n] = numpy.max(counts)
 
         return closest
-
-
-"""
-    def predict(self, testData):
-        return [self.classify(dataPoint, self.k) for dataPoint in testData]
-
-    def classify(self, dataPoint, k):
-        nNeighbors = self.nearestNeighbors(dataPoint, k)
-        return max(nNeighbors, key=nNeighbors.count)
-
-    def nearestNeighbors(self, dataPoint, k):
-        distances = ((self.data - dataPoint) ** 2).sum(axis=1)
-        indices = numpy.argsort(distances, axis=0)
-        nNeighbors = [self.target[i] for i in indices[:k]]
-        return nNeighbors
-"""
