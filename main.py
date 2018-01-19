@@ -186,5 +186,6 @@ def main():
     else:
         test_algorithm()
 
+
 # Runs the program
 main()
