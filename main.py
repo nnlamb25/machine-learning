@@ -92,6 +92,7 @@ def get_multiple_classifiers():
 
     return classifiers
 
+
 # Tests given data on a given algorithm
 def test_data_set(data_set, algorithm):
     # Splits the data randomly, gives 70% to train and 30% to test
@@ -134,6 +135,7 @@ def print_accuracy(classifier_name, data_set_name, accuracy):
     # Tells the user how accurate their algorithm was on their given data set
     print("\nThe " + classifier_name + " was " + str(round(accuracy * 100, 3)) +
           "% accurate on the " + data_set_name + " Data Set.")
+
 
 def test_algorithm():
     # Get the data set
