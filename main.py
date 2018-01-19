@@ -6,7 +6,7 @@ from HardCodedClassifier import HardCodedClassifier
 from kNNClassifier import kNNClassifier
 
 
-# Prompts the user for their desired dataset
+# Prompts the user for their desired data set
 def get_data_set():
     print("What data would you like to work with?")
     print("1 - Iris data set")
@@ -18,6 +18,27 @@ def get_data_set():
         return datasets.load_iris(), "Iris"
 
 
+# Gets the user's desired value of K for the nearest neighbor algorithm
+def get_k():
+    print("What value would you like to use for K?")
+    is_number = False
+    k = 1
+    while not is_number or k <= 0:
+        if k <= 0:
+            print("Value must be larger than 0")
+
+        is_number = True
+        # Handles error if user inputs a non-integer value
+        try:
+            k = int(input("> "))
+        except:
+            print("You must enter a number!")
+            is_number = False
+
+    return k
+
+
+# Gets a single classifier to test data on
 def get_classifier():
     # Prompts the user for their desired algorithm
     print("Which algorithm would you like to use?")
@@ -30,30 +51,46 @@ def get_classifier():
     if algorithm_response == '1':
         return GaussianNB(), "Gaussian"
     elif algorithm_response == '2':
-        print("What value would you like to use for K?")
-        isNumber = True
-        # User must enter a number for k
-        try:
-            k = int(input("> "))
-        except:
-            print("You must enter a number!")
-            isNumber = False
-
-        while not isNumber or k <= 0:
-            print("Value must be larger than 0")
-            isNumber = True
-            try:
-                k = int(input("> "))
-            except:
-                print("You must enter a number!")
-                isNumber = False
-
-        return kNNClassifier(k), "Hard Coded Nearest Neighbor Classifier"
+        k = get_k()
+        return kNNClassifier(k), "Hard Coded Nearest Neighbor Classifier with a K of " + str(k)
     elif algorithm_response == '3':
-        return KNeighborsClassifier(n_neighbors=3), "sci-learn Nearest Neighbor Classifier"
+        k = get_k()
+        return KNeighborsClassifier(n_neighbors=k), "sci-learn Nearest Neighbor Classifier with a K of " + str(k)
     else:
         return HardCodedClassifier(), "Hard Coded Classifier"
 
+
+# Gets a dictionary of classifiers to compare on a data set
+def get_multiple_classifiers():
+    # The classifiers dictionary will have a key with its name as a string
+    # and the value will be the classifier class
+    classifiers = dict()
+
+    # Gets the classifiers the user wants to compare
+    print("Which algorithms would you like to test?")
+    print("(Enter an algorithm one at a time, pressing enter after each addition)")
+    response = ""
+    while response != "done" and response != "Done":
+        print("1 - scikit-learn Gaussian")
+        print("2 - Hard Coded Nearest Neighbor Classifier")
+        print("3 - scikit-learn Nearest Neighbor Classifier")
+        print("4 - Hard Coded Classifier")
+        print("Type \"done\" when completed.")
+        response = input("> ")
+        if response == '1':
+            classifiers["scikit-learn Gaussian"] = GaussianNB()
+        elif response == '2':
+            k = get_k()
+            classifiers["Hard Coded Nearest Neighbor Classifier with a K of " + str(k)] = kNNClassifier(k)
+        elif response == '3':
+            k = get_k()
+            classifiers["sci-learn Nearest Neighbor Classifier with a K of " + str(k)] = KNeighborsClassifier(n_neighbors=k)
+        elif response == '4':
+            classifiers["Hard Coded Classifier"] = HardCodedClassifier()
+        elif response != "Done" and response != "done":
+            print("Not a valid response.")
+
+    return classifiers
 
 # Tests given data on a given algorithm
 def test_data_set(data_set, algorithm):
@@ -92,11 +129,15 @@ def print_data(data_set):
     print(data_set.target_names)
 
 
-def main():
+# Prints the accuracy of a given data set
+def print_accuracy(classifier_name, data_set_name, accuracy):
+    # Tells the user how accurate their algorithm was on their given data set
+    print("\nThe " + classifier_name + " was " + str(round(accuracy * 100, 3)) +
+          "% accurate on the " + data_set_name + " Data Set.")
+
+def test_algorithm():
     # Get the data set
     data_set, data_set_name = get_data_set()
-
-    job = get_job()
 
     # Get the classifier
     classifier, classifier_name = get_classifier()
@@ -107,13 +148,43 @@ def main():
     # Prompts the user if they would like to see their data set
     print("Would you like to see your data? (y, n)")
     see_data_response = input("> ")
-
     if see_data_response == 'y':
         print_data(data_set)
 
-    # Tells the user how accurate their algorithm was on their given data set
-    print("\nThe " + classifier_name + " algorithm was " + str(round(accuracy * 100, 3)) +
-          "% accurate on the " + data_set_name + " data set.")
+    # Displays the classifier's accuracy
+    print_accuracy(classifier_name, data_set_name, accuracy)
 
 
+# Compares multiple user given classifiers
+def compare_algorithms():
+    # Get the data set
+    data_set, data_set_name = get_data_set()
+
+    # Get the classifiers the user wants to compare
+    classifiers = get_multiple_classifiers()
+
+    print("Would you like to see your data? (y, n)")
+    see_data_response = input("> ")
+    if see_data_response == 'y':
+        print_data(data_set)
+
+    # Displays all of the classifier's accuracy
+    for classifier_name in classifiers.keys():
+        accuracy = test_data_set(data_set, classifiers[classifier_name])
+        print_accuracy(classifier_name, data_set_name, accuracy)
+
+
+# Asks the user if they would like to test an algorithm or compare many algorithms
+def main():
+    print("What would you like to do?")
+    print("1 - Test an algorithm")
+    print("2 - Compare multiple algorithms")
+    job_response = input("> ")
+
+    if job_response == '2':
+        compare_algorithms()
+    else:
+        test_algorithm()
+
+# Runs the program
 main()
