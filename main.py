@@ -1,7 +1,9 @@
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
 from HardCodedClassifier import HardCodedClassifier
+from kNNClassifier import kNNClassifier
 
 
 # Prompts the user for their desired dataset
@@ -19,14 +21,36 @@ def get_data_set():
 def get_classifier():
     # Prompts the user for their desired algorithm
     print("Which algorithm would you like to use?")
-    print("1 - Gaussian")
-    print("2 - Hard Coded Classifier")
+    print("1 - scikit-learn Gaussian")
+    print("2 - Hard Coded Nearest Neighbor Classifier")
+    print("3 - scikit-learn Nearest Neighbor Classifier")
+    print("4 - Hard Coded Classifier")
     algorithm_response = input("> ")
 
     if algorithm_response == '1':
         return GaussianNB(), "Gaussian"
     elif algorithm_response == '2':
-        return HardCodedClassifier(), "Hard Coded Classifier"
+        print("What value would you like to use for K?")
+        isNumber = True
+        # User must enter a number for k
+        try:
+            k = int(input("> "))
+        except:
+            print("You must enter a number!")
+            isNumber = False
+
+        while not isNumber or k <= 0:
+            print("Value must be larger than 0")
+            isNumber = True
+            try:
+                k = int(input("> "))
+            except:
+                print("You must enter a number!")
+                isNumber = False
+
+        return kNNClassifier(k), "Hard Coded Nearest Neighbor Classifier"
+    elif algorithm_response == '3':
+        return KNeighborsClassifier(n_neighbors=3), "sci-learn Nearest Neighbor Classifier"
     else:
         return HardCodedClassifier(), "Hard Coded Classifier"
 
@@ -71,6 +95,8 @@ def print_data(data_set):
 def main():
     # Get the data set
     data_set, data_set_name = get_data_set()
+
+    job = get_job()
 
     # Get the classifier
     classifier, classifier_name = get_classifier()
