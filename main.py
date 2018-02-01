@@ -8,6 +8,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import KFold
 from HardCodedClassifier import HardCodedClassifier
 from kNNClassifier import kNNClassifier
+from DecisionTreeClassifier import DecisionTreeClassifier
 
 
 # Prompts the user for their desired data set and returns that data set cleaned up a bit, with its name,
@@ -20,12 +21,19 @@ def get_data_set():
         print("2 - Car Evaluation data set")
         print("3 - Pima Indian Diabetes data set")
         print("4 - Automobile MPG data set")
+        print("5 - Voting data set")
 
         data_response = input("> ")
 
         if data_response == '1':
-            return pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"), \
-                   "Iris", False
+            data = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data")
+            columns = ["sepal length", "sepal width", "petal length", "petal width", "class"]
+            data.columns = columns
+            for col in columns:
+                data[col] = data[col].astype("category")
+
+            return data, "Iris", False
+
         elif data_response == '2':
             data = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/car/car.data")
             columns = ["buying", "maint", "doors", "persons", "lug_boot", "safety", "class"]
@@ -60,6 +68,24 @@ def get_data_set():
             data.replace("?", np.NaN, inplace=True)
             data.dropna(inplace=True)
             return data, "Automobile MPG", True
+
+        elif data_response == '5':
+            data = pd.read_csv(
+                "https://archive.ics.uci.edu/ml/machine-learning-databases/voting-records/house-votes-84.data")
+            data.replace("?", "-", inplace=True)
+            data.columns = ["party", "infants", "water project", "budget adoption", "physician fee", "el salvador aid",
+                            "religious school groups", "satellite test ban", "nicaraguan aid", "mx missile",
+                            "immigration", "corp cutback", "edu spending", "superfund sue", "crime",
+                            "duty free exports", "south africa export"]
+
+            new_columns = ["infants", "water project", "budget adoption", "physician fee", "el salvador aid",
+                           "religious school groups", "satellite test ban", "nicaraguan aid", "mx missile",
+                           "immigration", "corp cutback", "edu spending", "superfund sue", "crime", "duty free exports",
+                           "south africa export", "party"]
+            data = data.reindex(columns=new_columns)
+            for col in new_columns:
+                data[col] = data[col].astype("category")
+            return data, "Voting", False
 
         else:
             print("Not a valid input.")
@@ -133,6 +159,7 @@ def get_classifier(is_regressor_data):
             print("2 - Hard Coded Nearest Neighbor Classifier")
             print("3 - scikit-learn Nearest Neighbor Classifier")
             print("4 - Hard Coded Classifier")
+            print("5 - Decision Tree Classifier")
             algorithm_response = input("> ")
 
             if algorithm_response == '1':
@@ -142,10 +169,11 @@ def get_classifier(is_regressor_data):
                 return kNNClassifier(k), "Hard Coded Nearest Neighbor Classifier with a K of " + str(k)
             elif algorithm_response == '3':
                 k = get_k()
-                return KNeighborsClassifier(n_neighbors=k), \
-                       "sci-learn Nearest Neighbor Classifier with a K of " + str(k)
+                return KNeighborsClassifier(n_neighbors=k), "sci-learn Nearest Neighbor Classifier with a K of " + str(k)
             elif algorithm_response == '4':
                 return HardCodedClassifier(), "Hard Coded Classifier"
+            elif algorithm_response == '5':
+                return DecisionTreeClassifier(), "Decision Tree Classifier"
             else:
                 print("Not a valid response.")
 
@@ -187,6 +215,7 @@ def get_multiple_classifiers(is_regressor_data):
             print("2 - Hard Coded Nearest Neighbor Classifier")
             print("3 - scikit-learn Nearest Neighbor Classifier")
             print("4 - Hard Coded Classifier")
+            print("5 - Decision Tree Classifier")
             print("Type \"done\" when completed.")
             response = input("> ")
             if response == '1':
@@ -200,6 +229,8 @@ def get_multiple_classifiers(is_regressor_data):
                     KNeighborsClassifier(n_neighbors=k)
             elif response == '4':
                 classifiers["Hard Coded Classifier"] = HardCodedClassifier()
+            elif response == '5':
+                classifiers["Decision Tree Classifier"] = DecisionTreeClassifier()
             elif response != "Done" and response != "done":
                 print("Not a valid response.")
 
@@ -290,6 +321,11 @@ def test_algorithm():
     # Get the classifier
     classifier, classifier_name = get_classifier(is_regressor_data)
 
+    # If classifier is the decision tree, set its feature names to the data set's column names
+    if classifier_name == "Decision Tree Classifier":
+        columns = data_set.columns.values
+        classifier.set_feature_names(columns[:-1])
+
     # Get number of times the user wants to run the classifier on the data
     k = get_number_of_tests()
 
@@ -314,6 +350,11 @@ def compare_algorithms():
     # Get the classifiers the user wants to compare
     classifiers = get_multiple_classifiers(is_regressor_data)
 
+    # If classifier is the decision tree, set its feature names to the data set's column names
+    if "Decision Tree Classifier" in classifiers:
+        columns = data_set.columns.values
+        classifiers["Decision Tree Classifier"].set_feature_names(columns[:-1])
+
     # Get number of times the user wants to run the classifier on the data
     k = get_number_of_tests()
 
@@ -331,6 +372,7 @@ def compare_algorithms():
 
 # Asks the user if they would like to test an algorithm or compare many algorithms
 def main():
+
     print("What would you like to do?")
     print("1 - Test an algorithm")
     print("2 - Compare multiple algorithms")
