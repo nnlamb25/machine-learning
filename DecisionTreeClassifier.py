@@ -31,17 +31,17 @@ class DecisionTreeClassifier:
     def get_feature_values(self, data, feature):
         # List the values that feature can take
         values = []
-        if len(str(data)) == 1 and data not in values:
+        if len(data) == 1 and data not in values:
             values.append(data)
-        elif len(str(data)) > 1:
+        elif len(data) > 1:
             for datapoint in data:
-                if len(str(datapoint)) == 1 and datapoint not in values:
+                if len(datapoint) == 1 and datapoint not in values:
                     values.append(datapoint)
-                elif len(str(datapoint)) > 1 and datapoint[feature] not in values: #elif datapoint[feature] not in values:
+                elif len(datapoint) > 1 and datapoint[feature] not in values: #elif datapoint[feature] not in values:
                     values.append(datapoint[feature])
 
         return values
-
+    
     def calc_info_gain(self, data, target, feature):
         gain = 0
         nData = len(data)
@@ -57,10 +57,10 @@ class DecisionTreeClassifier:
                 #if datapoint.size == 1 and datapoint == value:
                 #    featureCounts[valueIndex] += 1
                 #    newClasses.append(target[dataIndex])
-                if len(str(datapoint)) == 1 and datapoint == value:
+                if len(datapoint) == 1 and datapoint == value:
                     featureCounts[valueIndex] += 1
                     newClasses.append(target[dataIndex])
-                elif len(str(datapoint)) > 1 and datapoint[feature] == value:#elif datapoint.size > 1 and datapoint[feature] == value:
+                elif len(datapoint) > 1 and datapoint[feature] == value:#elif datapoint.size > 1 and datapoint[feature] == value:
                     featureCounts[valueIndex] += 1
                     newClasses.append(target[dataIndex])
                 dataIndex += 1
@@ -150,7 +150,7 @@ class DecisionTreeClassifier:
                 index = 0
                 # Find the datapoints with each feature value
                 for datapoint in data:
-                    if len(str(datapoint)) == 1 and datapoint == value:
+                    if len(datapoint) == 1 and datapoint == value:
                         if bestFeature == 0:
                             #datapoint = datapoint[1:]
                             newNames = featureNames[1:]
@@ -163,9 +163,9 @@ class DecisionTreeClassifier:
                             newNames = featureNames[:bestFeature]
                             np.append(newNames, featureNames[bestFeature + 1:])#newNames.extend(featureNames[bestFeature + 1:])
 
-                        if len(newData) == 0 and len(str(datapoint)) > 0:
+                        if len(newData) == 0 and len(datapoint) > 0:
                             newData = datapoint
-                        elif len(str(datapoint)) > 0:
+                        elif len(datapoint) > 0:
                             np.append(newData, datapoint)#newData.append(datapoint)
 
                         if len(newTarget) == 0 and len(target[index]) > 0:
@@ -173,7 +173,7 @@ class DecisionTreeClassifier:
                         elif len(target[index]) > 0:
                             np.append(newTarget, target[index])#newTarget.append(target[index])
 
-                    elif len(str(datapoint)) > 0 and datapoint[bestFeature] == value:
+                    elif len(datapoint) > 0 and datapoint[bestFeature] == value:
                         if bestFeature == 0:
                             datapoint = datapoint[1:]
                             newNames = featureNames[1:]
