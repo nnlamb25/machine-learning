@@ -11,9 +11,10 @@ class DecisionTreeClassifier:
     def fit(self, data, target):
         self.target = target
         tree = self.make_tree(data, target, self.feature_names)
+        print("\n\n\nENDING TREE:")
         print(tree)
 
-        return DecisionTreeModel(data, target)
+        return DecisionTreeModel(tree, self.feature_names)
 
     # Returns the most freqquent target
     def most_frequent_target(self):
@@ -35,13 +36,12 @@ class DecisionTreeClassifier:
             values.append(data)
         elif len(data) > 1:
             for datapoint in data:
-                if len(datapoint) == 1 and datapoint not in values:
-                    values.append(datapoint)
+                if len(datapoint) == 1 and datapoint[0] not in values:
+                    values.append(datapoint[0])
                 elif len(datapoint) > 1 and datapoint[feature] not in values: #elif datapoint[feature] not in values:
                     values.append(datapoint[feature])
-
         return values
-    
+
     def calc_info_gain(self, data, target, feature):
         gain = 0
         nData = len(data)
@@ -49,6 +49,7 @@ class DecisionTreeClassifier:
         featureCounts = np.zeros(len(values))
         entropy = np.zeros(len(values))
         valueIndex = 0
+
         # Find where those values appear in data[feature] and the corresponding target
         for value in values:
             dataIndex = 0
@@ -93,13 +94,85 @@ class DecisionTreeClassifier:
     def make_tree(self, data, target, featureNames):
         # Various initialisations suppressed
         newData = np.array([])
-        newTarget = np.array([])
+        newClasses = np.array([])#newTarget = np.array([])
         newNames = np.array([])
         nData = len(data)
         nFeatures = len(featureNames)
 
+        if isinstance(target, str):
+            return target
+
+        if nData == 0 or nFeatures == 0:
+            # Have reached an empty branch
+            if len(target) != 0:
+                target_set = set(target)
+                frequency = [0] * len(target_set)
+                index = 0
+                for value in target_set:
+                    frequency[index] = np.count_nonzero(target == value)
+                    # frequency[index] = target.count(value)
+                    index += 1
+
+                default = target[np.argmax(frequency)]
+            else:
+                default = self.most_frequent_target()
+
+            return default
+
+        elif len(target[0]) == nData:
+            # Only 1 class remains
+            return target[0]
+        else:
+            # Choose which feature is best
+            gain = np.zeros(nFeatures)
+            values = []
+            for feature in range(nFeatures):
+                g = self.calc_info_gain(data, target, feature)
+                gain[feature] = np.argmin(g)
+                # Find possible feature values
+                values.extend(self.get_feature_values(data, feature))
+            if len(values) > 1:
+                values = set(values)
+            else:
+                values = values[0]
+            bestFeature = np.argmin(gain)
+            tree = {featureNames[bestFeature]: {}}  # Find the possible feature values
+            for value in values:
+                index = 0
+                # Find the datapoints with each feature value
+                for datapoint in data:
+                    if datapoint[bestFeature] == value:
+                        if bestFeature == 0:
+                            datapoint = datapoint[1:]
+                            newNames = featureNames[1:]
+                        elif bestFeature == nFeatures:
+                            datapoint = datapoint[:-1]
+                            newNames = featureNames[:-1]
+                        else:
+                            datapoint = datapoint[:bestFeature]
+                            datapoint.extend(datapoint[bestFeature + 1:])
+                            newNames = featureNames[:bestFeature]
+                            newNames.extend(featureNames[bestFeature + 1:])
+
+                        if len(newData) == 0:
+                            newData = datapoint
+                        else:
+                            newData = np.vstack([newData, datapoint])
+
+                        if len(newClasses) == 0:
+                            newClasses = target[index]
+                        else:
+                            newClasses = np.append(newClasses, target[index])
+
+                    index += 1
+                 # Now recurse to the next level
+                subtree = self.make_tree(newData, newClasses, newNames)
+                # And on returning, add the subtree on to the tree
+                tree[featureNames[bestFeature]][value] = subtree
+            return tree
+
         # If there is no more data and no more features, return the most frequent value
-        if nData == 0 and nFeatures == 0:
+    """    if nData == 0 and nFeatures == 0:
             if len(target) != 0:
                 target_set = set(target)
                 frequency = [0] * len(target_set)
@@ -202,20 +275,56 @@ class DecisionTreeClassifier:
                 # And on returning, add the subtree on to the tree
                 tree[featureNames[bestFeature]][value] = subtree
             return tree
-
+"""
 
 class DecisionTreeModel:
-    def __init__(self, data, target):
-        self.data = data
-        self.target = target
+    def __init__(self, tree, feature_names):
+        self.tree = tree
         self.model = []
+        self.feature_names = feature_names
+
+    def get_feature_index(self, feature):
+        return np.where(self.feature_names == feature)
+
+    def get_node(self, tree, row):
+        #print("\nTREE")
+        #print(tree)
+        #print("LENGTH")
+        #print(sum(len(v) for v in tree.items()))
+        #if sum(len(v) for v in tree.items()) > 1:
+        key = next(iter(tree))
+        key_index = self.get_feature_index(key)
+        node_value = row[key_index][0]
+        #print("\nKEY INDEX:")
+        #print(key_index)
+        #print("\nKEY:")
+        #print(key)
+        #print("\nNODE VALUE:")
+        #print(node_value)
+        #print()
+        #print(tree[key][node_value])
+        return tree[key][node_value]
+        #return self.get_node(tree[key][node_value], row)
+        #else:
+            #return 'r'
 
     def predict(self, data):
-        unique, pos = np.unique(self.target, return_inverse=True)
-        counts = np.bincount(pos)
-        maxpos = counts.argmax()
-        most_common_target = self.target[maxpos]
-        for _ in data:
-            self.model.append(most_common_target)
+        for row in data:
+            self.model.append(self.get_node(self.tree, row))
+        #for row in data:
+         #   for key in self.tree:
+         #       key_index = self.get_feature_index(key)
+         #       print(row)
+         #       print(key)
+         #       print(key_index)
+                #print(row['physician fee'])
+         #       print(row[key_index])
+          #  self.model.append('r')
+        #unique, pos = np.unique(self.target, return_inverse=True)
+        #counts = np.bincount(pos)
+        #maxpos = counts.argmax()
+        #most_common_target = self.target[maxpos]
+        #for _ in data:
+        #    self.model.append(most_common_target)
 
         return self.model
