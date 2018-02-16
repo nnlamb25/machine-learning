@@ -41,8 +41,10 @@ class TargetVerticesNode:
         self.threshold = threshold
         # This is the target for this node
         self.target = target
-        # Initially assigns random weights
-        for _ in range(num_inputs):
+        # Accounts for a biased node
+        self.bias = -1
+        # Initially assigns random weights for each input and the biased node
+        for _ in range(num_inputs + 1):
             self.input_weights.append(rn.uniform(-0.1, 0.1))
 
     # Trains this vertices node to have correct weights
@@ -52,7 +54,10 @@ class TargetVerticesNode:
         #print(self.input_weights)
         # Gets the sum of the weights times the data input
         for index in range(len(data_row)):
-            value += data_row[index] * self.input_weights[index]
+            value += data_row[index] * self.input_weights[index + 1]
+
+        # Add the biased node
+        value += self.bias * self.input_weights[0]
 
         print("VALUE FOR " + str(data_row) + " : " + str(value))
         return True
