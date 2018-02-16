@@ -122,7 +122,7 @@ class Neurons:
             for data_row in data:
                 index = 0
                 for node in self.neural_array:
-                    if not node.train(data_row, self.targets[0]):
+                    if not node.train(data_row, self.targets[index]):
                         done = False
 
                 index += 1
