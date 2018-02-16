@@ -59,6 +59,12 @@ class TargetVerticesNode:
         # Add the biased node
         value += self.bias * self.input_weights[0]
 
+        # Node fires if the value is greater than 0 and doesn't fire if the value is less than 0
+        if value > 0:
+            value = 1
+        else:
+            value = 0
+
         print("VALUE FOR " + str(data_row) + " : " + str(value))
         return True
 """
