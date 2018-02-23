@@ -1,5 +1,6 @@
 import numpy as np
 import random as rn
+import operator
 from math import exp
 
 class NeuralNetworkCalssifier:
@@ -40,7 +41,7 @@ class TargetVerticesNode:
         return 1 / (1 + exp(-value))
 
     # Trains this vertices node to have correct weights
-    def train(self, data_row, data_target=None):
+    def train(self, data_row):#, data_target=None):
         self.value = 0
         n = -0.1
         # Gets the sum of the weights times the data input
@@ -49,15 +50,17 @@ class TargetVerticesNode:
 
         # Add the biased node
         self.value += self.bias * self.input_weights[0]
+        self.value = self.sigmoid(self.value)
 
-        if data_target is None:
-            return self.value
-        else:
-            self.value = self.sigmoid(self.value)
-            if (self.value >= 0.5 and data_target == self.target) or (self.value < 0.5 and data_target != self.target):
-                return True
-            else:
-                return False
+        return self.value
+
+        #if data_target is None:
+        #    return self.value
+        #else:
+        #    if (self.value >= 0.5 and data_target == self.target) or (self.value < 0.5 and data_target != self.target):
+        #        return True
+        #    else:
+        #        return False
 
 
 # Holds an array of vertices between the data inputs and their targets
@@ -113,18 +116,29 @@ class Neurons:
                         for node in layer:
                             hidden_node_values[layer_index + 1].append(node.train(hidden_node_values[layer_index]))
 
+                    target_values = dict()
                     for node in self.neural_network[-1]:
-                        if not node.train(hidden_node_values[-1], self.targets[index]):
-                            done = False
+                        target_values[node.target] = node.train(hidden_node_values[-1])
+
+                    if self.targets[index] != max(target_values.items(), key=operator.itemgetter(1))[0]:
+                        done = False
+                    #for node in self.neural_network[-1]:
+                    #    if not node.train(hidden_node_values[-1], self.targets[index]):
+                    #        done = False
 
         else:
             while not done and runs < 1000:
                 done = True
                 runs += 1
                 for index, data_row in enumerate(data):
+                    target_values = dict()
                     for node in self.neural_array:
-                        if not node.train(data_row, self.targets[index]):
+                        target_values[node.target] = node.train(data_row)
+
+                        if self.targets[index] != max(target_values.items(), key=operator.itemgetter(1))[0]:
                             done = False
+                        #if not node.train(data_row, self.targets[index]):
+                        #    done = False
 
     # Predicts the target for a particular row of data
     def predict(self, data_row):
@@ -137,18 +151,18 @@ class Neurons:
                 for node in layer:
                     hidden_node_values[layer_index + 1].append(node.train(hidden_node_values[layer_index]))
 
+            target_values = dict()
             for node in self.neural_network[-1]:
-                if node.train(hidden_node_values[-1], node.target):
-                    return node.target
+                target_values[node.target] = node.train(data_row)
 
-            return self.most_common_target
+            print(str(target_values) + " - " + str(max(target_values.items(), key=operator.itemgetter(1))[0]) + "\n")
+            return max(target_values.items(), key=operator.itemgetter(1))[0]
         else:
+            target_values = dict()
             for node in self.neural_network:
-                if node.train(data_row, node.target):
-                    return node.target
+                target_values[node.target] = node.train(data_row)
 
-            return self.most_common_target
-
+            return max(target_values.items(), key=operator.itemgetter(1))[0]
 
 class NeuralNetworkModel:
     def __init__(self, neural_network):
