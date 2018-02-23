@@ -1,137 +1,162 @@
 import numpy as np
 import random as rn
+from math import exp
 
 class NeuralNetworkCalssifier:
     def __init__(self):
-        pass
+        self.num_nodes = []
+        self.num_hidden_layers = int(input("With how many hidden layers?\n> "))
+        for i in range(self.num_hidden_layers):
+            self.num_nodes.append(int(input("How many nodes in layer " + str(i + 1) + "?\n> ")))
 
     def fit(self, data, target):
         # We want the number of columns in the data set
         num_rows, num_cols = data.shape
         # Creates a neural network with num_cols nodes
-        neural_network = Neurons(num_cols, target)
+        neural_network = Neurons(num_cols, self.num_hidden_layers, self.num_nodes, target)
         # Teaches the neural network from the data
         neural_network.teach(data)
 
-        return NeuralNetworkModel(target)
-
-
-class NeuralNetworkModel:
-    def __init__(self, target):
-        self.target = target
-        self.model = []
-
-    def predict(self, data):
-        unique, pos = np.unique(self.target, return_inverse=True)
-        counts = np.bincount(pos)
-        maxpos = counts.argmax()
-        most_common_target = self.target[maxpos]
-        for _ in data:
-            self.model.append(most_common_target)
-
-        return self.model
+        return NeuralNetworkModel(neural_network)
 
 
 # A node which holds the weights between a neuron and the targets
 class TargetVerticesNode:
-    def __init__(self, num_inputs, threshold, target):
+    def __init__(self, num_inputs, target=None):
         # The weights between this neuron and every target
         self.input_weights = []
-        # This is the value the neuron uses to compare its value to determine if it should fire
-        self.threshold = threshold
         # This is the target for this node
         self.target = target
+        # The value this node carries (will be updated in train)
+        self.value = 0
         # Accounts for a biased node
         self.bias = -1
         # Initially assigns random weights for each input and the biased node
         for _ in range(num_inputs + 1):
             self.input_weights.append(rn.uniform(-0.1, 0.1))
 
+    #sigmoid function to determine whether or not the neuron fires
+    def sigmoid(self, value):
+        return 1 / (1 + exp(-value))
+
     # Trains this vertices node to have correct weights
-    def train(self, data_row, data_target):
-        value = 0
+    def train(self, data_row, data_target=None):
+        self.value = 0
         n = -0.1
-        #print(self.input_weights)
         # Gets the sum of the weights times the data input
-        for index in range(len(data_row)):
-            value += data_row[index] * self.input_weights[index + 1]
+        for index in range(len(data_row) - 1):
+            self.value += data_row[index] * self.input_weights[index + 1]
 
         # Add the biased node
-        value += self.bias * self.input_weights[0]
+        self.value += self.bias * self.input_weights[0]
 
-        # Node fires if the value is greater than 0 and doesn't fire if the value is less than 0
-        if value > 0:
-            value = 1
+        if data_target is None:
+            return self.value
         else:
-            value = 0
+            self.value = self.sigmoid(self.value)
+            if (self.value >= 0.5 and data_target == self.target) or (self.value < 0.5 and data_target != self.target):
+                return True
+            else:
+                return False
 
-        print("VALUE FOR " + str(data_row) + " : " + str(value))
-        return True
-"""
-        # Node fired (predicting this data row is for this node's target
-        if value >= self.threshold and value < self.threshold + 2:
-            # Fired correctly
-            if data_target == self.target:
-                #print("TRUE - FIRED CORRECTLY")
-                return True
-            # Fired and it shouldn't have
-            else:
-                #print("FALSE - FIRED AND IT SHOULDN'T HAVE")
-                index = 0
-                for weight in self.input_weights:
-                    self.input_weights[index] = weight - n * (value - self.threshold) * data_row[index]
-                    index += 1
-                return False
-        # Node did not fire (predicting this data row is not for this node's target
-        else:
-            # Did not fire correctly
-            if data_target != self.target:
-                #print("TRUE - DID NOT FIRE CORRECTLY")
-                return True
-            # Did not fire and it should have
-            else:
-                #print("FALSE - DID NOT FIRE AND IT SHOULD HAVE")
-                index = 0
-                for weight in self.input_weights:
-                    self.input_weights[index] = weight - n * (self.threshold - value) * data_row[index]
-                    index += 1
-                return False
-"""
 
 # Holds an array of vertices between the data inputs and their targets
 class Neurons:
-    def __init__(self, num_cols, targets):
+    def __init__(self, num_cols, num_hidden_layers, num_nodes, targets):
+        # Gets the most common target
+        unique, pos = np.unique(targets, return_inverse=True)
+        counts = np.bincount(pos)
+        maxpos = counts.argmax()
+        self.most_common_target = targets[maxpos]
         # Will hold the vertices
-        self.neural_array = []
+        self.neural_network = [[] for _ in range(num_hidden_layers + 1)]
         # Holds all the targets for each data row
         self.targets = targets
         # Holds only the unique targets
         self.unique_targets = set(targets)
-        # Determines the threshold based on the number of targets, each Separated by a distance of 2
-        thresholds = np.arange(-len(self.unique_targets), len(self.unique_targets), 2)
-        # Creates a vertices node for each unique target
-        index = 0
-        for unique_target in self.unique_targets:
-            self.neural_array.append(TargetVerticesNode(num_cols, thresholds[index], unique_target))
-            index += 1
+        # Number of hidden layers between input and output layers
+        self.num_hidden_layers = num_hidden_layers
+        # Create every layer including hidden layers
+        if num_hidden_layers > 0:
+            # Create first layer with the number of columns as the number of vertices
+            for node in range(num_nodes[0]):
+                self.neural_network[0].append(TargetVerticesNode(num_cols))
+
+            # Create the hidden layers with the number of vertices being the number of nodes in the previous layer
+            for index in range(num_hidden_layers - 1):
+                for node in range(num_nodes[index + 1]):
+                    self.neural_network[index + 1].append(TargetVerticesNode(num_nodes[index]))
+
+            # Create he output layer
+            for unique_target in self.unique_targets:
+                self.neural_network[num_hidden_layers].append(TargetVerticesNode(num_nodes[-1], unique_target))
+
+        else: # No hidden layers, only input and output
+            for unique_target in self.unique_targets:
+                self.neural_network[0].append(TargetVerticesNode(num_cols, unique_target))
 
     # Teaches the neuron array when to fire when given data
     def teach(self, data):
         # This will run when either all the weights are correct or after 1000 runs
         done = False
         runs = 0
-        while not done and runs < 1000:
-           # if runs % 100 == 0:
-            #    print(runs)
-            done = True
-            runs += 1
-            for data_row in data:
-                index = 0
-                for node in self.neural_array:
-                    if not node.train(data_row, self.targets[index]):
-                        done = False
+        if self.num_hidden_layers > 0:
+            while not done and runs < 1000:
+                done = True
+                runs += 1
+                for index, data_row in enumerate(data):
+                    hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
+                    for node in self.neural_network[0]:
+                        hidden_node_values[0].append(node.train(data_row))
 
-                index += 1
+                    for layer_index, layer in enumerate(self.neural_network[1:-2]):
+                        for node in layer:
+                            hidden_node_values[layer_index + 1].append(node.train(hidden_node_values[layer_index]))
 
-       # print("\n\nDONE")
-       # print("CORRECT: " + str(done) + " - RUNS: " + str(runs))
+                    for node in self.neural_network[-1]:
+                        if not node.train(hidden_node_values[-1], self.targets[index]):
+                            done = False
+
+        else:
+            while not done and runs < 1000:
+                done = True
+                runs += 1
+                for index, data_row in enumerate(data):
+                    for node in self.neural_array:
+                        if not node.train(data_row, self.targets[index]):
+                            done = False
+
+    # Predicts the target for a particular row of data
+    def predict(self, data_row):
+        if self.num_hidden_layers > 0:
+            hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
+            for node in self.neural_network[0]:
+                hidden_node_values[0].append(node.train(data_row))
+
+            for layer_index, layer in enumerate(self.neural_network[1:-2]):
+                for node in layer:
+                    hidden_node_values[layer_index + 1].append(node.train(hidden_node_values[layer_index]))
+
+            for node in self.neural_network[-1]:
+                if node.train(hidden_node_values[-1], node.target):
+                    return node.target
+
+            return self.most_common_target
+        else:
+            for node in self.neural_network:
+                if node.train(data_row, node.target):
+                    return node.target
+
+            return self.most_common_target
+
+
+class NeuralNetworkModel:
+    def __init__(self, neural_network):
+        self.neural_network = neural_network
+        self.model = []
+
+    def predict(self, data):
+        for data_row in data:
+            self.model.append(self.neural_network.predict(data_row))
+
+        return self.model
