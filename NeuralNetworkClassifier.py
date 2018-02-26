@@ -108,7 +108,11 @@ class Neurons:
                 done = True
                 runs += 1
                 for index, data_row in enumerate(data):
-                    hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
+                    if self.num_hidden_layers > 1:
+                        hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
+                    else:
+                        hidden_node_values = [[]]
+
                     for node in self.neural_network[0]:
                         hidden_node_values[0].append(node.train(data_row))
 
@@ -132,7 +136,7 @@ class Neurons:
                 runs += 1
                 for index, data_row in enumerate(data):
                     target_values = dict()
-                    for node in self.neural_array:
+                    for node in self.neural_network[0]:
                         target_values[node.target] = node.train(data_row)
 
                         if self.targets[index] != max(target_values.items(), key=operator.itemgetter(1))[0]:
@@ -143,7 +147,11 @@ class Neurons:
     # Predicts the target for a particular row of data
     def predict(self, data_row):
         if self.num_hidden_layers > 0:
-            hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
+            if self.num_hidden_layers > 1:
+                hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
+            else:
+                hidden_node_values = [[]]
+
             for node in self.neural_network[0]:
                 hidden_node_values[0].append(node.train(data_row))
 
@@ -159,7 +167,7 @@ class Neurons:
             return max(target_values.items(), key=operator.itemgetter(1))[0]
         else:
             target_values = dict()
-            for node in self.neural_network:
+            for node in self.neural_network[0]:
                 target_values[node.target] = node.train(data_row)
 
             return max(target_values.items(), key=operator.itemgetter(1))[0]
