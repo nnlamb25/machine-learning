@@ -41,7 +41,7 @@ class TargetVerticesNode:
         return 1 / (1 + exp(-value))
 
     # Trains this vertices node to have correct weights
-    def train(self, data_row):#, data_target=None):
+    def train(self, data_row):
         self.value = 0
         n = -0.1
         # Gets the sum of the weights times the data input
@@ -166,7 +166,7 @@ class Neurons:
             target_values = dict()
             # Gets the activation for each target
             for node in self.neural_network[-1]:
-                target_values[node.target] = node.train(data_row)
+                target_values[node.target] = node.train(hidden_node_values[-1])
 
             # Predicts the target with the highest activation value
             return max(target_values.items(), key=operator.itemgetter(1))[0]
