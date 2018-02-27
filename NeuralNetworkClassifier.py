@@ -54,14 +54,6 @@ class TargetVerticesNode:
 
         return self.value
 
-        #if data_target is None:
-        #    return self.value
-        #else:
-        #    if (self.value >= 0.5 and data_target == self.target) or (self.value < 0.5 and data_target != self.target):
-        #        return True
-        #    else:
-        #        return False
-
 
 # Holds an array of vertices between the data inputs and their targets
 class Neurons:
@@ -103,73 +95,88 @@ class Neurons:
         # This will run when either all the weights are correct or after 1000 runs
         done = False
         runs = 0
+        # If there are hidden layers
         if self.num_hidden_layers > 0:
+            # Runs either 1000 times or until it guesses everything correctly
             while not done and runs < 1000:
+                # If this never changes, everything was predicted correctly
                 done = True
+                # Runs counter
                 runs += 1
+                # Loop through each row of data
                 for index, data_row in enumerate(data):
+                    # 2D array to keep track of nodes values at each layer
                     if self.num_hidden_layers > 1:
                         hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
                     else:
                         hidden_node_values = [[]]
-
+                    # Set up the first layer with the data as inputs
                     for node in self.neural_network[0]:
                         hidden_node_values[0].append(node.train(data_row))
-
+                    # Set up all the hidden ayers with the previous layer's activation as the value
                     for layer_index, layer in enumerate(self.neural_network[1:-2]):
                         for node in layer:
                             hidden_node_values[layer_index + 1].append(node.train(hidden_node_values[layer_index]))
-
+                    # A dictionary with the target name as the key and its activation as the value
                     target_values = dict()
+                    # Gets the activation for each target
                     for node in self.neural_network[-1]:
                         target_values[node.target] = node.train(hidden_node_values[-1])
-
+                    # If the highest activation value was the correct target, it predicted correctly!
                     if self.targets[index] != max(target_values.items(), key=operator.itemgetter(1))[0]:
+                        # If did not guess correctly, we're going to have to loop again.
                         done = False
-                    #for node in self.neural_network[-1]:
-                    #    if not node.train(hidden_node_values[-1], self.targets[index]):
-                    #        done = False
-
+        # No hidden layers
         else:
+            # Runs either 1000 times or if it guesses every target correctly
             while not done and runs < 1000:
+                # If this never changes, everything was predicted correctly
                 done = True
+                # Runs counter
                 runs += 1
+                # Loop through each row of data
                 for index, data_row in enumerate(data):
+                    # A dictionary with the target name as the key and its activation as the value
                     target_values = dict()
+                    # Loop through each node in the neural network and calculate its activation
                     for node in self.neural_network[0]:
                         target_values[node.target] = node.train(data_row)
-
+                        # If the highest activation value was the correct target, it predicted correctly!
                         if self.targets[index] != max(target_values.items(), key=operator.itemgetter(1))[0]:
+                            # If did not guess correctly, we're going to have to loop again.
                             done = False
-                        #if not node.train(data_row, self.targets[index]):
-                        #    done = False
 
     # Predicts the target for a particular row of data
     def predict(self, data_row):
+        # If there are hidden layers
         if self.num_hidden_layers > 0:
+            # 2D array to keep track of nodes values at each layer
             if self.num_hidden_layers > 1:
                 hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
             else:
                 hidden_node_values = [[]]
-
+            # Set up the first layer with the data as inputs
             for node in self.neural_network[0]:
                 hidden_node_values[0].append(node.train(data_row))
-
+            # Set up all the hidden ayers with the previous layer's activation as the value
             for layer_index, layer in enumerate(self.neural_network[1:-2]):
                 for node in layer:
                     hidden_node_values[layer_index + 1].append(node.train(hidden_node_values[layer_index]))
-
+            # A dictionary with the target name as the key and its activation as the value
             target_values = dict()
+            # Gets the activation for each target
             for node in self.neural_network[-1]:
                 target_values[node.target] = node.train(data_row)
 
-            print(str(target_values) + " - " + str(max(target_values.items(), key=operator.itemgetter(1))[0]) + "\n")
+            # Predicts the target with the highest activation value
             return max(target_values.items(), key=operator.itemgetter(1))[0]
-        else:
+        else: # No hidden layers
+            # A dictionary with the target name as the key and its activation as the value
             target_values = dict()
+            # Gets the activation for each target
             for node in self.neural_network[0]:
                 target_values[node.target] = node.train(data_row)
-
+            # Predicts the target with the highest activation value
             return max(target_values.items(), key=operator.itemgetter(1))[0]
 
 class NeuralNetworkModel:
