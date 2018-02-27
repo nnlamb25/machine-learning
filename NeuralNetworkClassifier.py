@@ -30,14 +30,17 @@ class TargetVerticesNode:
         self.target = target
         # The value this node carries (will be updated in train)
         self.value = 0
+        # The error of this node (will be updated)
+        self.delta = 0
         # Accounts for a biased node
         self.bias = -1
         # Initially assigns random weights for each input and the biased node
         for _ in range(num_inputs + 1):
             self.input_weights.append(rn.uniform(-0.1, 0.1))
 
-    #sigmoid function to determine whether or not the neuron fires
-    def sigmoid(self, value):
+    # sigmoid function to determine whether or not the neuron fires
+    @staticmethod
+    def sigmoid(value):
         return 1 / (1 + exp(-value))
 
     # Trains this vertices node to have correct weights
@@ -45,7 +48,7 @@ class TargetVerticesNode:
         self.value = 0
         n = -0.1
         # Gets the sum of the weights times the data input
-        for index in range(len(data_row) - 1):
+        for index in range(len(data_row)):
             self.value += data_row[index] * self.input_weights[index + 1]
 
         # Add the biased node
@@ -79,14 +82,15 @@ class Neurons:
 
             # Create the hidden layers with the number of vertices being the number of nodes in the previous layer
             for index in range(num_hidden_layers - 1):
-                for node in range(num_nodes[index + 1]):
-                    self.neural_network[index + 1].append(TargetVerticesNode(num_nodes[index]))
+                for _ in range(num_nodes[index + 1]):
+                    self.neural_network[index + 1].append(TargetVerticesNode(len(self.neural_network[index])))
 
             # Create he output layer
             for unique_target in self.unique_targets:
-                self.neural_network[num_hidden_layers].append(TargetVerticesNode(num_nodes[-1], unique_target))
+                self.neural_network[num_hidden_layers].append(TargetVerticesNode(
+                    len(self.neural_network[num_hidden_layers - 1]), unique_target))
 
-        else: # No hidden layers, only input and output
+        else:  # No hidden layers, only input and output
             for unique_target in self.unique_targets:
                 self.neural_network[0].append(TargetVerticesNode(num_cols, unique_target))
 
@@ -107,14 +111,14 @@ class Neurons:
                 for index, data_row in enumerate(data):
                     # 2D array to keep track of nodes values at each layer
                     if self.num_hidden_layers > 1:
-                        hidden_node_values = [[] for _ in range(self.num_hidden_layers - 1)]
+                        hidden_node_values = [[] for _ in range(self.num_hidden_layers)]
                     else:
                         hidden_node_values = [[]]
                     # Set up the first layer with the data as inputs
                     for node in self.neural_network[0]:
                         hidden_node_values[0].append(node.train(data_row))
                     # Set up all the hidden ayers with the previous layer's activation as the value
-                    for layer_index, layer in enumerate(self.neural_network[1:-2]):
+                    for layer_index, layer in enumerate(self.neural_network[1:-1]):
                         for node in layer:
                             hidden_node_values[layer_index + 1].append(node.train(hidden_node_values[layer_index]))
                     # A dictionary with the target name as the key and its activation as the value
@@ -123,8 +127,11 @@ class Neurons:
                     for node in self.neural_network[-1]:
                         target_values[node.target] = node.train(hidden_node_values[-1])
                     # If the highest activation value was the correct target, it predicted correctly!
-                    if self.targets[index] != max(target_values.items(), key=operator.itemgetter(1))[0]:
-                        # If did not guess correctly, we're going to have to loop again.
+                    prediction = self.get_key_with_max_value(target_values)
+                    if self.targets[index] != prediction:
+                        # If we didn't predict correctly, we need to recalculate these weights
+                        self.recalculate_weights(data_row, self.targets[index])
+                        # We're going to have to loop again.
                         done = False
         # No hidden layers
         else:
@@ -142,9 +149,37 @@ class Neurons:
                     for node in self.neural_network[0]:
                         target_values[node.target] = node.train(data_row)
                         # If the highest activation value was the correct target, it predicted correctly!
-                        if self.targets[index] != max(target_values.items(), key=operator.itemgetter(1))[0]:
+                        if self.targets[index] != self.get_key_with_max_value(target_values):
                             # If did not guess correctly, we're going to have to loop again.
                             done = False
+
+    # Recalculates the weights
+    def recalculate_weights(self, data, correct_target_value):
+        # Loop through each target node and recalculate its weight if it needs to be recalculated
+        for target_node in self.neural_network[-1]:
+            # This is what it was supposed to predict and didn't
+            if target_node.target == correct_target_value:
+                # Calculate the error of the target node
+                target_node.delta = target_node.value * (1 - target_node.value) * (target_node.value - 1)
+            # All other nodes
+            else:  # target_node is not the correct target value
+                # Calculate the error
+                target_node.delta = target_node.value * (1 - target_node.value) * target_node.value
+        if self.num_hidden_layers > 0:
+            hidden_layer_index = len(self.neural_network) - 1
+            while hidden_layer_index >= 0:
+                for node in self.neural_network[hidden_layer_index]:
+                    print("VALUE: " + str(node.value) + " TARGET: " + str(node.target))
+                hidden_layer_index -= 1
+        #else:
+            # Do stuff
+
+
+
+    # Gets the key of the item with the max value in a dictionary
+    @staticmethod
+    def get_key_with_max_value(dictionary):
+        return max(dictionary.items(), key=operator.itemgetter(1))[0]
 
     # Predicts the target for a particular row of data
     def predict(self, data_row):
@@ -169,15 +204,16 @@ class Neurons:
                 target_values[node.target] = node.train(hidden_node_values[-1])
 
             # Predicts the target with the highest activation value
-            return max(target_values.items(), key=operator.itemgetter(1))[0]
-        else: # No hidden layers
+            return self.get_key_with_max_value(target_values)
+        else:  # No hidden layers
             # A dictionary with the target name as the key and its activation as the value
             target_values = dict()
             # Gets the activation for each target
             for node in self.neural_network[0]:
                 target_values[node.target] = node.train(data_row)
             # Predicts the target with the highest activation value
-            return max(target_values.items(), key=operator.itemgetter(1))[0]
+            return self.get_key_with_max_value(target_values)
+
 
 class NeuralNetworkModel:
     def __init__(self, neural_network):
