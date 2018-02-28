@@ -60,11 +60,6 @@ class TargetVerticesNode:
 # Holds an array of vertices between the data inputs and their targets
 class Neurons:
     def __init__(self, num_cols, num_hidden_layers, num_nodes, targets):
-        # Gets the most common target
-        unique, pos = np.unique(targets, return_inverse=True)
-        counts = np.bincount(pos)
-        maxpos = counts.argmax()
-        self.most_common_target = targets[maxpos]
         # Will hold the vertices
         self.neural_network = [[] for _ in range(num_hidden_layers + 1)]
         # Holds all the targets for each data row
@@ -103,7 +98,7 @@ class Neurons:
         # If there are hidden layers
         if self.num_hidden_layers > 0:
             # Runs either 1000 times or until it guesses everything correctly
-            while not done and runs < 1000:
+            while not done and runs < 10000:
                 # If this never changes, everything was predicted correctly
                 done = True
                 # Runs counter
@@ -135,8 +130,9 @@ class Neurons:
                         self.recalculate_node_values(prediction, self.targets[index], data_row)
                         # We're going to have to loop again.
                         done = False
-                accuracy = self.get_accuracy(data)
-                print("Now " + str(round(accuracy * 100, 3)) + "% accurate. - " + str(runs) + "\n")
+                if runs % 2000 == 0:
+                    accuracy = self.get_accuracy(data)
+                    print("Now " + str(round(accuracy * 100, 3)) + "% accurate. - " + str(runs) + "\n")
         else:  # No hidden layers
             # Runs either 1000 times or if it guesses every target correctly
             while not done and runs < 10000:
@@ -159,7 +155,7 @@ class Neurons:
                         self.recalculate_node_values(prediction, self.targets[index], data_row)
                         # If did not guess correctly, we're going to have to loop again.
                         done = False
-                if runs % 5000 == 0:
+                if runs % 2000 == 0:
                     accuracy = self.get_accuracy(data)
                     print("Now " + str(round(accuracy * 100, 3)) + "% accurate. - " + str(runs) + "\n")
 
@@ -180,8 +176,8 @@ class Neurons:
             for layer_index, layer in enumerate(self.neural_network[1:-1]):
                 for node_index, node in enumerate(layer):
                     # Recalculate the node's weights
-                    self.neural_network[layer_index][node_index] = self.calc_weights(node, self.neural_network,
-                                                                                     layer_index - 1)
+                    self.neural_network[layer_index + 1][node_index] = self.calc_weights(node, self.neural_network,
+                                                                                     layer_index)
         # Recalculate the weights for the first hidden layer (or only layer if no hidden layers)
         # The data is the input this time, no previous nodes to get values from
         for node_index, node in enumerate(self.neural_network[0]):
@@ -204,7 +200,7 @@ class Neurons:
             node.input_weights[0] = node.input_weights[0] - (n * node.delta * node.bias)
         else:  # This node resides in a hidden layer that isn't the first layer
             # Loop through all the weights of vertices that are attached to input values
-            for weight_index in range(len(node.input_weughts) - 1):
+            for weight_index in range(len(node.input_weights) - 1):
                 # Reassign the node's weight
                 node.input_weights[weight_index + 1] = node.input_weights[weight_index + 1] - (
                         n * node.delta * values[prev_layer_index][weight_index].value)
@@ -255,7 +251,7 @@ class Neurons:
     def get_accuracy(self, data):
         num_predicted_correctly = 0
         for index, data_row in enumerate(data):
-            print(str(self.predict(data_row)) + " - " + str(self.targets[index]))
+            # print(str(self.predict(data_row)) + " - " + str(self.targets[index]))
             if self.predict(data_row) == self.targets[index]:
                 num_predicted_correctly += 1
 
