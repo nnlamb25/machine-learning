@@ -6,9 +6,11 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import KFold
+from sklearn.neural_network import MLPClassifier
 from HardCodedClassifier import HardCodedClassifier
 from kNNClassifier import kNNClassifier
 from DecisionTreeClassifier import DecisionTreeClassifier
+from NeuralNetworkClassifier import NeuralNetworkCalssifier
 
 
 # Prompts the user for their desired data set and returns that data set cleaned up a bit, with its name,
@@ -70,9 +72,11 @@ def get_data_set():
             return data, "Automobile MPG", True
 
         elif data_response == '5':
-            data = pd.read_csv(
-                "https://archive.ics.uci.edu/ml/machine-learning-databases/voting-records/house-votes-84.data")
-            data.replace("?", "-", inplace=True)
+            data = pd.read_csv('house-votes-84.data')
+                #"https://archive.ics.uci.edu/ml/machine-learning-databases/voting-records/house-votes-84.data")
+            #data.replace("?", "-", inplace=True)
+            data.replace("?", np.NaN, inplace=True)
+            data.dropna(inplace=True)
             data.columns = ["party", "infants", "water project", "budget adoption", "physician fee", "el salvador aid",
                             "religious school groups", "satellite test ban", "nicaraguan aid", "mx missile",
                             "immigration", "corp cutback", "edu spending", "superfund sue", "crime",
@@ -85,6 +89,7 @@ def get_data_set():
             data = data.reindex(columns=new_columns)
             for col in new_columns:
                 data[col] = data[col].astype("category")
+
             return data, "Voting", False
 
         else:
@@ -158,8 +163,10 @@ def get_classifier(is_regressor_data):
             print("1 - scikit-learn Gaussian")
             print("2 - Hard Coded Nearest Neighbor Classifier")
             print("3 - scikit-learn Nearest Neighbor Classifier")
-            print("4 - Hard Coded Classifier")
-            print("5 - Decision Tree Classifier")
+            print("4 - Decision Tree Classifier")
+            print("5 - Hard Coded Neural Network Classifier")
+            print("6 - scikit-learn Neural Network Classifier")
+            print("7 - Hard Coded Classifier")
             algorithm_response = input("> ")
 
             if algorithm_response == '1':
@@ -171,9 +178,13 @@ def get_classifier(is_regressor_data):
                 k = get_k()
                 return KNeighborsClassifier(n_neighbors=k), "sci-learn Nearest Neighbor Classifier with a K of " + str(k)
             elif algorithm_response == '4':
-                return HardCodedClassifier(), "Hard Coded Classifier"
-            elif algorithm_response == '5':
                 return DecisionTreeClassifier(), "Decision Tree Classifier"
+            elif algorithm_response == '5':
+                return NeuralNetworkCalssifier(), "Hard Coded Neural Network Classifier"
+            elif algorithm_response == '6':
+                return MLPClassifier(), "scikit-learn Neural Network Classifier"
+            elif algorithm_response == '7':
+                return HardCodedClassifier(), "Hard Coded Classifier"
             else:
                 print("Not a valid response.")
 
@@ -214,8 +225,10 @@ def get_multiple_classifiers(is_regressor_data):
             print("1 - scikit-learn Gaussian")
             print("2 - Hard Coded Nearest Neighbor Classifier")
             print("3 - scikit-learn Nearest Neighbor Classifier")
-            print("4 - Hard Coded Classifier")
-            print("5 - Decision Tree Classifier")
+            print("4 - Decision Tree Classifier")
+            print("5 - Hard Coded Nerual Network Classifier")
+            print("6 - scikit-learn Neural Network Classifier")
+            print("7 - Hard Coded Classifier")
             print("Type \"done\" when completed.")
             response = input("> ")
             if response == '1':
@@ -228,9 +241,13 @@ def get_multiple_classifiers(is_regressor_data):
                 classifiers["sci-learn Nearest Neighbor Classifier with a K of " + str(k)] = \
                     KNeighborsClassifier(n_neighbors=k)
             elif response == '4':
-                classifiers["Hard Coded Classifier"] = HardCodedClassifier()
-            elif response == '5':
                 classifiers["Decision Tree Classifier"] = DecisionTreeClassifier()
+            elif response == '5':
+                classifiers["Hard Coded Neural Network Classifier"] = NeuralNetworkCalssifier()
+            elif response == '6':
+                classifiers["scikit-learn Neural Network Classifier"] = MLPClassifier()
+            elif response == '7':
+                classifiers["Hard Coded Classifier"] = HardCodedClassifier()
             elif response != "Done" and response != "done":
                 print("Not a valid response.")
 
@@ -252,7 +269,7 @@ def clean(data):
 
 
 # Tests the algorithm k times using k-cross validation
-def k_cross_validation(data_set, algorithm, k):
+def k_cross_validation(data_set, algorithm, k, requires_cleaning):
     kf = KFold(n_splits=k)
     sum_of_accuracies = 0
 
@@ -268,7 +285,7 @@ def k_cross_validation(data_set, algorithm, k):
         test = data_set.iloc[test]
 
         # Gets the accuracy of this test
-        accuracy = test_data_set(train, test, algorithm)
+        accuracy = test_data_set(train, test, algorithm, requires_cleaning)
         sum_of_accuracies += accuracy
 
     # Returns the average accuracy
@@ -276,11 +293,16 @@ def k_cross_validation(data_set, algorithm, k):
 
 
 # Tests given data on a given algorithm
-def test_data_set(train, test, algorithm):
+def test_data_set(train, test, algorithm, requires_cleaning):
 
     # Separates the data and puts it into a numpy array
-    train_data = np.array(clean(train[train.columns[0: -1]]))
-    test_data = np.array(clean(test[test.columns[0: -1]]))
+    if requires_cleaning:
+        train_data = np.array(clean(train[train.columns[0: -1]]))
+        test_data = np.array(clean(test[test.columns[0: -1]]))
+    else:
+        train_data = np.array(train[train.columns[0: -1]])
+        test_data = np.array(test[test.columns[0: -1]])
+
     train_target = np.array(train.iloc[:, -1])
     test_target = np.array(test.iloc[:, -1])
 
@@ -330,7 +352,7 @@ def test_algorithm():
     k = get_number_of_tests()
 
     # Gets the accuracy of the the algorithm on the data set
-    accuracy = k_cross_validation(data_set, classifier, k)
+    accuracy = k_cross_validation(data_set, classifier, k, classifier_name != "Decision Tree Classifier")
 
     # Prompts the user if they would like to see their data set
     print("Would you like to see your data? (y, n)")
@@ -366,7 +388,8 @@ def compare_algorithms():
 
     # Displays all of the classifier's accuracy
     for classifier_name in classifiers.keys():
-        accuracy = k_cross_validation(data_set, classifiers[classifier_name], k)
+        accuracy = k_cross_validation(data_set, classifiers[classifier_name], k,
+                                      classifier_name != "Decision Tree Classifier")
         print_accuracy(classifier_name, data_set_name, accuracy)
 
 
