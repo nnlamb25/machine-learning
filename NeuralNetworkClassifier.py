@@ -2,6 +2,7 @@ import numpy as np
 import random as rn
 import operator
 from math import exp
+import matplotlib.pyplot as plt
 
 class NeuralNetworkCalssifier:
     def __init__(self):
@@ -36,7 +37,7 @@ class TargetVerticesNode:
         self.bias = -1
         # Initially assigns random weights for each input and the biased node
         for _ in range(num_inputs + 1):
-            self.input_weights.append(rn.uniform(-0.1, 0.1))
+            self.input_weights.append(rn.uniform(-1, 1))
 
     # sigmoid function to determine whether or not the neuron fires
     @staticmethod
@@ -93,12 +94,15 @@ class Neurons:
         # This will run when either all the weights are correct or after 1000 runs
         done = False
         runs = 0
-        accuracy = self.get_accuracy(data)
-        print("Starting accuracy: " + str(round(accuracy * 100, 3)) + "%\n")
+        accuracy = []
+        ac = self.get_accuracy(data)
+        accuracy.append(ac)
+        #accuracy = self.get_accuracy(data)
+        print("Starting accuracy: " + str(round(ac * 100, 3)) + "\n")
         # If there are hidden layers
         if self.num_hidden_layers > 0:
             # Runs either 1000 times or until it guesses everything correctly
-            while not done and runs < 10000:
+            while not done and runs < 1000:
                 # If this never changes, everything was predicted correctly
                 done = True
                 # Runs counter
@@ -123,19 +127,21 @@ class Neurons:
                     for node in self.neural_network[-1]:
                         target_values[node.target] = node.train(hidden_node_values[-1])
                     # Get the target with the highest activation value
-                    prediction = self.get_key_with_max_value(target_values)
+                    prediction = min(target_values, key=target_values.get)#self.get_key_with_max_value(target_values)
                     # If the highest activation value was the correct target, it predicted correctly!
                     if self.targets[index] != prediction:
                         # If we didn't predict correctly, we need to recalculate these weights
                         self.recalculate_node_values(prediction, self.targets[index], data_row)
                         # We're going to have to loop again.
                         done = False
-                if runs % 2000 == 0:
-                    accuracy = self.get_accuracy(data)
-                    print("Now " + str(round(accuracy * 100, 3)) + "% accurate. - " + str(runs) + "\n")
+                accuracy.append(self.get_accuracy(data) * 100)
+
+                #if runs % 1000 == 0:
+                #    accuracy = self.get_accuracy(data)
+                #    print("Now " + str(round(accuracy * 100, 3)) + "% accurate. - " + str(runs) + "\n")
         else:  # No hidden layers
             # Runs either 1000 times or if it guesses every target correctly
-            while not done and runs < 10000:
+            while not done and runs < 1000:
                 # If this never changes, everything was predicted correctly
                 done = True
                 # Runs counter
@@ -148,16 +154,23 @@ class Neurons:
                     for node in self.neural_network[0]:
                         target_values[node.target] = node.train(data_row)
                     # Get the target with the highest activation value
-                    prediction = self.get_key_with_max_value(target_values)
+                    prediction = min(target_values, key=target_values.get)#self.get_key_with_max_value(target_values)
                     # If the highest activation value was the correct target, it predicted correctly!
                     if self.targets[index] != prediction:
                         # If we didn't predict correctly, we need to recalculate these weights
                         self.recalculate_node_values(prediction, self.targets[index], data_row)
                         # If did not guess correctly, we're going to have to loop again.
                         done = False
-                if runs % 2000 == 0:
-                    accuracy = self.get_accuracy(data)
-                    print("Now " + str(round(accuracy * 100, 3)) + "% accurate. - " + str(runs) + "\n")
+                accuracy.append(self.get_accuracy(data) * 100)
+        print("TEST DONE")
+        print("ENDING ACCURACY: " + str(round(accuracy[-1], 3)))
+        x = range(0, len(accuracy), 1)
+        plt.close()
+        plt.plot(x, accuracy)
+        plt.show()
+                #if runs % 1000 == 0:
+                #    accuracy = self.get_accuracy(data)
+                #    print("Now " + str(round(accuracy * 100, 3)) + "% accurate. - " + str(runs) + "\n")
 
     # Recalculates the weights
     def recalculate_node_values(self, wrongly_predicted_target, correct_target, data):
@@ -166,29 +179,28 @@ class Neurons:
         # If there are hidden layers
         if self.num_hidden_layers > 0:
             # Loop through the target nodes and change the weights for the required targets
-            for node_index, node in enumerate(self.neural_network[-1]):
+            for node in self.neural_network[-1]:
                 # Only need to change the weights of the targets that should have been
                 # predicted and weren't or that were wrongly predicted
                 if node.target == correct_target or node.target == wrongly_predicted_target:
                     # Reassign the weights of the node
-                    self.neural_network[-1][node_index] = self.calc_weights(node, self.neural_network, -2)
+                    self.calc_weights(node, self.neural_network, -2)
             # Now loop through every layer between the output layer and the first hidden layer
             for layer_index, layer in enumerate(self.neural_network[1:-1]):
-                for node_index, node in enumerate(layer):
+                for node in layer:
                     # Recalculate the node's weights
-                    self.neural_network[layer_index + 1][node_index] = self.calc_weights(node, self.neural_network,
-                                                                                     layer_index)
+                    self.calc_weights(node, self.neural_network, layer_index)
         # Recalculate the weights for the first hidden layer (or only layer if no hidden layers)
         # The data is the input this time, no previous nodes to get values from
-        for node_index, node in enumerate(self.neural_network[0]):
-            self.neural_network[0][node_index] = self.calc_weights(node, data)
+        for node in self.neural_network[0]:
+            self.calc_weights(node, data)
 
     # Recalculate the weights of a particular node.  layer_index will determine which layer of the neural
     # network this node resides, unless it is on the first (or only) layer, in which case there will be no layer_index
     @staticmethod
     def calc_weights(node, values, prev_layer_index=None):
         # n used for calculating new weight
-        n = -0.1
+        n = -.1
         # This is the first (or only) layer in the neural network.
         if prev_layer_index is None:
             # Loop through all the weights of vertices that are attached to input values
@@ -206,13 +218,11 @@ class Neurons:
                         n * node.delta * values[prev_layer_index][weight_index].value)
             # Calculate the new weight for the bias node
             node.input_weights[0] = node.input_weights[0] - (n * node.delta * node.bias)
-        # Return the node with the new updated weights
-        return node
 
     # Recalculates the required deltas for the nodes
     def recalculate_deltas(self, wrongly_predicted_target, correct_target):
         # Loop through each target node and recalculate its delta if it needs to be recalculated
-        for target_node_index, target_node in enumerate(self.neural_network[-1]):
+        for target_node in self.neural_network[-1]:
             # This is what it was supposed to predict and didn't
             if target_node.target == correct_target:
                 # Calculate the error of the target node
@@ -221,8 +231,6 @@ class Neurons:
             elif target_node.target == wrongly_predicted_target:  # target_node is not the correct target value
                 # Calculate the error
                 target_node.delta = target_node.value * (1 - target_node.value) * target_node.value
-            # Assign the new node with the updated delta to the neural network
-            self.neural_network[-1][target_node_index] = target_node
         # If there are more hidden layers, we're not done yet
         if self.num_hidden_layers > 0:
             # We need to start at the hidden layers closest to the target and work backwards
@@ -231,14 +239,13 @@ class Neurons:
             while hidden_layer_index >= 0:
                 # Loop through each node in this hidden layer
                 for node_index, node in enumerate(self.neural_network[hidden_layer_index]):
-                    # Calculate the sum for each node next layer node's delta times the weight to that node
+                    # Calculate the sum for each next layer node's delta multiplied by the
+                    # weight between that node and this node
                     sum_delta_weights = 0
                     for prev_node in self.neural_network[hidden_layer_index + 1]:
                         sum_delta_weights += prev_node.input_weights[node_index + 1] * prev_node.delta
                     # Calculate the new delta for the node
                     node.delta = node.value * (1 - node.value) * sum_delta_weights
-                    # Assign the new node with the updated delta to the neural network
-                    self.neural_network[hidden_layer_index][node_index] = node
                 # Decrement the index
                 hidden_layer_index -= 1
 
@@ -251,9 +258,10 @@ class Neurons:
     def get_accuracy(self, data):
         num_predicted_correctly = 0
         for index, data_row in enumerate(data):
-            # print(str(self.predict(data_row)) + " - " + str(self.targets[index]))
+            #print(str(self.predict(data_row)) + " - " + str(self.targets[index]))
             if self.predict(data_row) == self.targets[index]:
                 num_predicted_correctly += 1
+            #print(self.targets[index] + "\n")
 
         return num_predicted_correctly / len(self.targets)
 
@@ -279,7 +287,8 @@ class Neurons:
             for node in self.neural_network[-1]:
                 target_values[node.target] = node.train(hidden_node_values[-1])
             # Predicts the target with the highest activation value
-            return self.get_key_with_max_value(target_values)
+            #print(str(target_values) + " - " + str(min(target_values, key=target_values.get)))
+            return min(target_values, key=target_values.get)#self.get_key_with_max_value(target_values)
         else:  # No hidden layers
             # A dictionary with the target name as the key and its activation as the value
             target_values = dict()
@@ -287,7 +296,8 @@ class Neurons:
             for node in self.neural_network[0]:
                 target_values[node.target] = node.train(data_row)
             # Predicts the target with the highest activation value
-            return self.get_key_with_max_value(target_values)
+            #print(str(target_values) + " - " + str(min(target_values, key=target_values.get)))
+            return min(target_values, key=target_values.get)#self.get_key_with_max_value(target_values)
 
 
 class NeuralNetworkModel:
