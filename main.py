@@ -11,6 +11,10 @@ from HardCodedClassifier import HardCodedClassifier
 from kNNClassifier import kNNClassifier
 from DecisionTreeClassifier import DecisionTreeClassifier
 from NeuralNetworkClassifier import NeuralNetworkCalssifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+
 
 
 # Prompts the user for their desired data set and returns that data set cleaned up a bit, with its name,
@@ -21,9 +25,10 @@ def get_data_set():
         print("What data would you like to work with?")
         print("1 - Iris data set")
         print("2 - Car Evaluation data set")
-        print("3 - Pima Indian Diabetes data set")
+        print("3 - Pima Indian Diabetes data set - DISCONTINUED")
         print("4 - Automobile MPG data set")
         print("5 - Voting data set")
+        print("6 - Income data set")
 
         data_response = input("> ")
 
@@ -46,16 +51,17 @@ def get_data_set():
             return data, "Car Evaluation", False
 
         elif data_response == '3':
-            data = pd.read_csv(
-                "https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/"
-                "pima-indians-diabetes.data")
-            data.columns = ["pregnancies", "glucose", "blood pressure", "tricep thickness", "insulin", "bmi",
-                            "pedigree", "age", "diabetic"]
-            data["diabetic"].replace([0, 1], ["non-diabetic", "diabetic"], inplace=True)
-            data["diabetic"] = data["diabetic"].astype("category")
-            data.replace(0, np.NaN, inplace=True)
-            data.dropna(inplace=True)
-            return data, "Pima Indian Diabetes", False
+            print("Sorry, tht data set has been removed.  Please select another.")
+        #    data = pd.read_csv(
+        #        "https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/"
+        #        "pima-indians-diabetes.data")
+        #    data.columns = ["pregnancies", "glucose", "blood pressure", "tricep thickness", "insulin", "bmi",
+        #                    "pedigree", "age", "diabetic"]
+        #    data["diabetic"].replace([0, 1], ["non-diabetic", "diabetic"], inplace=True)
+        #    data["diabetic"] = data["diabetic"].astype("category")
+        #    data.replace(0, np.NaN, inplace=True)
+        #    data.dropna(inplace=True)
+        #    return data, "Pima Indian Diabetes", False
 
         elif data_response == '4':
             data = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",
@@ -72,9 +78,7 @@ def get_data_set():
             return data, "Automobile MPG", True
 
         elif data_response == '5':
-            data = pd.read_csv('house-votes-84.data')
-                #"https://archive.ics.uci.edu/ml/machine-learning-databases/voting-records/house-votes-84.data")
-            #data.replace("?", "-", inplace=True)
+            data = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/voting-records/house-votes-84.data")
             data.replace("?", np.NaN, inplace=True)
             data.dropna(inplace=True)
             data.columns = ["party", "infants", "water project", "budget adoption", "physician fee", "el salvador aid",
@@ -92,13 +96,25 @@ def get_data_set():
 
             return data, "Voting", False
 
+        elif data_response == '6':
+            data = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data")
+            data.replace("?", np.NaN, inplace=True)
+            data.dropna(inplace=True)
+            columns = ["Age", "workclass", "fnlwgt", "education", "education-num", "marital-status", "occupation",
+                            "relationship", "race", "sex", "capital-gain", "capital-loss", "hours-per-week",
+                            "native-country", "income"]
+            data.columns = columns
+            for col in columns:
+                data[col] = data[col].astype("category")
+            return data, "Income", False
+
         else:
             print("Not a valid input.")
 
 
 # Gets the user's desired value of K for the nearest neighbor algorithm
-def get_k():
-    print("What value would you like to use for K?")
+def get_k(var):
+    print("What value would you like to use for " + str(var) + "?")
     is_number = False
     k = 1
     while not is_number or k <= 0:
@@ -114,6 +130,42 @@ def get_k():
             is_number = False
 
     return k
+
+def set_sample():
+    print("What value would you like to set max sample to?")
+    is_number = False
+    sample = 1
+    while not is_number or sample <= 0 or sample > 1:
+        if sample <= 0 or sample > 1:
+            print("Value must be larger than 0 and less than or equal to 1")
+
+        is_number = True
+        # Handles error if user inputs a non-integer value
+        try:
+            sample = float(input("> "))
+        except:
+            print("You must enter a number!")
+            is_number = False
+
+    return sample
+
+def set_features():
+    print("What value would you like to set max feature to?")
+    is_number = False
+    feature = 1
+    while not is_number or feature <= 0 or feature > 1:
+        if feature <= 0 or feature > 1:
+            print("Value must be larger than 0 and less than or equal to 1")
+
+        is_number = True
+        # Handles error if user inputs a non-integer value
+        try:
+            feature = float(input("> "))
+        except:
+            print("You must enter a number!")
+            is_number = False
+
+    return feature
 
 
 # Gets from the user how many times to run the test
@@ -149,10 +201,10 @@ def get_classifier(is_regressor_data):
             algorithm_response = input("> ")
 
             if algorithm_response == '1':
-                k = get_k()
+                k = get_k('k')
                 return kNNClassifier(k), "Hard Coded Nearest Neighbor Classifier with a K of " + str(k)
             elif algorithm_response == '2':
-                k = get_k()
+                k = get_k('k')
                 return KNeighborsRegressor(n_neighbors=k), "sci-learn Nearest Neighbor Regressor with a K of " + str(k)
             elif algorithm_response == '3':
                 return HardCodedClassifier(), "Hard Coded Classifier"
@@ -166,16 +218,19 @@ def get_classifier(is_regressor_data):
             print("4 - Decision Tree Classifier")
             print("5 - Hard Coded Neural Network Classifier")
             print("6 - scikit-learn Neural Network Classifier")
-            print("7 - Hard Coded Classifier")
+            print("7 - scikit-learn Bagging Classifier")
+            print("8 - scikit-learn Random Forest Classifier")
+            print("9 - scikit-learn Ada Boost Classifier")
+            print("10 - Hard Coded Classifier")
             algorithm_response = input("> ")
 
             if algorithm_response == '1':
                 return GaussianNB(), "Gaussian"
             elif algorithm_response == '2':
-                k = get_k()
+                k = get_k('K')
                 return kNNClassifier(k), "Hard Coded Nearest Neighbor Classifier with a K of " + str(k)
             elif algorithm_response == '3':
-                k = get_k()
+                k = get_k('K')
                 return KNeighborsClassifier(n_neighbors=k), "sci-learn Nearest Neighbor Classifier with a K of " + str(k)
             elif algorithm_response == '4':
                 return DecisionTreeClassifier(), "Decision Tree Classifier"
@@ -184,6 +239,18 @@ def get_classifier(is_regressor_data):
             elif algorithm_response == '6':
                 return MLPClassifier(), "scikit-learn Neural Network Classifier"
             elif algorithm_response == '7':
+                sample = set_sample()
+                feature = set_features()
+                k = get_k('k')
+                return BaggingClassifier(KNeighborsClassifier(n_neighbors=k), max_samples=sample, max_features=feature),\
+                       "scikit-learn Bagging Classifier sample=" + str(sample) + " feature=" + str(feature) + " k=" + str(k)
+            elif algorithm_response == '8':
+                k = get_k('n')
+                return RandomForestClassifier(n_estimators=k), "scikit-learn Random Forest Classifier n=" + str(k)
+            elif algorithm_response == '9':
+                k = get_k('n')
+                return AdaBoostClassifier(n_estimators=k), "scikit-learn Ada Boost Classifier n=" + str(k)
+            elif algorithm_response == '10':
                 return HardCodedClassifier(), "Hard Coded Classifier"
             else:
                 print("Not a valid response.")
@@ -209,10 +276,10 @@ def get_multiple_classifiers(is_regressor_data):
             print("Type \"done\" when completed.")
             response = input("> ")
             if response == '1':
-                k = get_k()
+                k = get_k('K')
                 classifiers["Hard Coded Nearest Neighbor Classifier with a K of " + str(k)] = kNNClassifier(k)
             elif response == '2':
-                k = get_k()
+                k = get_k('K')
                 classifiers["sci-learn Nearest Neighbor Regressor with a K of " + str(k)] = KNeighborsRegressor(
                     n_neighbors=k)
             elif response == '3':
@@ -228,16 +295,19 @@ def get_multiple_classifiers(is_regressor_data):
             print("4 - Decision Tree Classifier")
             print("5 - Hard Coded Nerual Network Classifier")
             print("6 - scikit-learn Neural Network Classifier")
-            print("7 - Hard Coded Classifier")
+            print("7 - scikit-learn Bagging Classifier")
+            print("8 - scikit-learn Random Forest Classifier")
+            print("9 - scikit-learn Ada Boost Classifier")
+            print("10 - Hard Coded Classifier")
             print("Type \"done\" when completed.")
             response = input("> ")
             if response == '1':
                 classifiers["scikit-learn Gaussian"] = GaussianNB()
             elif response == '2':
-                k = get_k()
+                k = get_k('K')
                 classifiers["Hard Coded Nearest Neighbor Classifier with a K of " + str(k)] = kNNClassifier(k)
             elif response == '3':
-                k = get_k()
+                k = get_k('K')
                 classifiers["sci-learn Nearest Neighbor Classifier with a K of " + str(k)] = \
                     KNeighborsClassifier(n_neighbors=k)
             elif response == '4':
@@ -247,6 +317,19 @@ def get_multiple_classifiers(is_regressor_data):
             elif response == '6':
                 classifiers["scikit-learn Neural Network Classifier"] = MLPClassifier()
             elif response == '7':
+                sample = set_sample()
+                features = set_features()
+                k = get_k('k')
+                classifiers["scikit-learn Bagging Classifier sample=" + str(sample) + " feature=" + str(features) +
+                            " k=" + str(k)] = BaggingClassifier(KNeighborsClassifier(n_neighbors=k),
+                                                                max_samples=sample, max_features=features)
+            elif response == '8':
+                k = get_k('n')
+                classifiers["scikit-learn Random Forest Classifier n=" + str(k)] = RandomForestClassifier(n_estimators=k)
+            elif response == '9':
+                k = get_k('n')
+                classifiers["scikit-learn Ada Boost Classifier n=" + str(k)] = AdaBoostClassifier(n_estimators=k)
+            elif response == '10':
                 classifiers["Hard Coded Classifier"] = HardCodedClassifier()
             elif response != "Done" and response != "done":
                 print("Not a valid response.")
@@ -395,6 +478,7 @@ def compare_algorithms():
 
 # Asks the user if they would like to test an algorithm or compare many algorithms
 def main():
+    pd.options.mode.chained_assignment = None
 
     print("What would you like to do?")
     print("1 - Test an algorithm")
